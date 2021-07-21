@@ -1,0 +1,2 @@
+rootProject.name = "Pomorodo"
+include ':app'
