@@ -1,13 +1,12 @@
 package com.realluck.pomorodo
 
 
-import android.annotation.SuppressLint
+
 import android.content.res.Resources
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.drawable.AnimationDrawable
 import android.os.CountDownTimer
-import androidx.core.content.ContextCompat
+import android.util.Log
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
@@ -23,10 +22,19 @@ class StopwatchViewHolder(
 
     fun bind(stopwatch: Stopwatch) {
         binding.stopwatchTimer.text = stopwatch.currentMS.displayTime()
+        binding.progressView.setPeriod(stopwatch.totalMS)
+
+        if (stopwatch.currentMS < stopwatch.totalMS)
+        {
+            binding.progressView.setCurrent(stopwatch.totalMS- stopwatch.currentMS)
+        } else binding.progressView.setCurrent(0)
+
         if(stopwatch.isStarted) {
             setIsRecyclable(false)
+            Log.d("TAG", "setIsRecyclable(false)")
         } else if(!isRecyclable) {
             setIsRecyclable(true)
+            Log.d("TAG", "setIsRecyclable(true)")
         }
         if (stopwatch.isStarted) {
             startTimer(stopwatch)
@@ -44,10 +52,13 @@ class StopwatchViewHolder(
             {
                 stopwatch.isStarted ->
                 {
-                    listener.stop(stopwatch.id, stopwatch.currentMS)
+                    listener.stop(stopwatch.id, stopwatch.currentMS, stopwatch.isFinished)
                 }
                 else ->
-                {
+                {   if (stopwatch.isFinished) {
+                    stopwatchOnElements(stopwatch)
+
+                }
                     listener.start((stopwatch.id))
                 }
             }
@@ -58,11 +69,12 @@ class StopwatchViewHolder(
             if(!isRecyclable) setIsRecyclable(true)
             listener.delete(stopwatch.id)
         }
+
     }
 
     private fun startTimer(stopwatch: Stopwatch) {
         binding.startPauseButton.text="Stop"
-
+        Log.d("TAG", "startTimer()")
 
         timer?.cancel()
         timer = getCountDownTimer(stopwatch)
@@ -75,7 +87,7 @@ class StopwatchViewHolder(
     private fun stopTimer(stopwatch: Stopwatch)
     {
         binding.startPauseButton.text="Start"
-
+        Log.d("TAG", "stopTimer")
 
         timer?.cancel()
 
@@ -90,52 +102,55 @@ class StopwatchViewHolder(
             override fun onTick(millisUntilFinished: Long)
             {
                 stopwatch.currentMS = millisUntilFinished
+                binding.progressView.setCurrent(stopwatch.totalMS - stopwatch.currentMS)
                 binding.stopwatchTimer.text = stopwatch.currentMS.displayTime()
             }
 
 
             override fun onFinish()
             {
-                with(binding) {
-                    root.setCardBackgroundColor(ResourcesCompat.getColor(resources, R.color.tomato, null))
-                    startPauseButton.setBackgroundColor((ResourcesCompat.getColor(resources, R.color.tomato_dark, null)))
-                    deleteButton.setColorFilter(Color.parseColor("#95353C"))
-                    deleteButton.setBackgroundColor((ResourcesCompat.getColor(resources, R.color.tomato, null)))
-                    blinkingIndicator.isVisible = false
-                    startPauseButton.isClickable = false
-                    startPauseButton.text = "Finished"
-                    setIsRecyclable(true)
-                    (blinkingIndicator.background as? AnimationDrawable)?.stop()
-                }
-
+                stopwatchOffElements(stopwatch)
             }
 
         }
     }
 
-    private fun Long.displayTime(): String {
-        if (this <= 0L) {
-            return START_TIME
+
+    private fun stopwatchOffElements(stopwatch: Stopwatch){
+        Log.d("TAG", "offElements")
+
+        stopwatch.isFinished = true
+        setIsRecyclable(true)
+        Log.d("TAG", "setIsRecyclable(true) from OffElements")
+        stopwatch.isStarted = false
+        with(binding) {
+            root.setCardBackgroundColor(ResourcesCompat.getColor(resources, R.color.tomato, null))
+            startPauseButton.setBackgroundColor((ResourcesCompat.getColor(resources, R.color.tomato_dark, null)))
+            deleteButton.setColorFilter(Color.parseColor("#95353C"))
+            deleteButton.setBackgroundColor((ResourcesCompat.getColor(resources, R.color.tomato, null)))
+            blinkingIndicator.isVisible = false
+            progressView.isVisible = false
+            startPauseButton.text = "Reset"
+            (blinkingIndicator.background as? AnimationDrawable)?.stop()
         }
-        val h = this / 1000 / 3600
-        val m = this / 1000 % 3600 / 60
-        val s = this / 1000 % 60
-
-
-        return "${displaySlot(h)}:${displaySlot(m)}:${displaySlot(s)}"
     }
 
-    private fun displaySlot(count: Long): String {
-        return if (count / 10L > 0)
-        {
-            "$count"
-        } else {
-            "0$count"
+    private fun stopwatchOnElements(stopwatch: Stopwatch){
+        Log.d("TAG", "onElements")
+        stopwatch.isFinished = false
+        stopwatch.currentMS = stopwatch.totalMS
+
+        with(binding) {
+
+            root.setCardBackgroundColor(ResourcesCompat.getColor(resources, R.color.transparent, null))
+            startPauseButton.setBackgroundColor((ResourcesCompat.getColor(resources, R.color.purple_500, null)))
+            deleteButton.setColorFilter(Color.parseColor("#FF6200EE"))
+            deleteButton.setBackgroundColor((ResourcesCompat.getColor(resources, R.color.transparent, null)))
+            blinkingIndicator.isVisible = true
+            progressView.isVisible = true
+            progressView.setCurrent(0)
+
         }
     }
 
-    private companion object {
-        private const val START_TIME = "00:00:00"
-        private const val UNIT_HUNDRED_MS = 100L
-    }
 }
